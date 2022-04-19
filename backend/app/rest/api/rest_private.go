@@ -142,12 +142,12 @@ func (s *private) createCommentCtrl(w http.ResponseWriter, r *http.Request) {
 
 	// check if user blocked
 	if s.dataService.IsBlocked(comment.Locator.SiteID, comment.User.ID) {
-		rest.SendErrorJSON(w, r, http.StatusForbidden, errors.New("rejected"), "user blocked", rest.ErrUserBlocked)
+		rest.SendErrorJSON(w, r, http.StatusForbidden, fmt.Errorf("rejected"), "user blocked", rest.ErrUserBlocked)
 		return
 	}
 
 	if s.isReadOnly(comment.Locator) {
-		rest.SendErrorJSON(w, r, http.StatusForbidden, errors.New("rejected"), "old post, read-only", rest.ErrReadOnly)
+		rest.SendErrorJSON(w, r, http.StatusForbidden, fmt.Errorf("rejected"), "old post, read-only", rest.ErrReadOnly)
 		return
 	}
 
@@ -207,7 +207,7 @@ func (s *private) updateCommentCtrl(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currComment.User.ID != user.ID {
-		rest.SendErrorJSON(w, r, http.StatusForbidden, errors.New("rejected"),
+		rest.SendErrorJSON(w, r, http.StatusForbidden, fmt.Errorf("rejected"),
 			"can not edit comments for other users", rest.ErrNoAccess)
 		return
 	}
@@ -268,13 +268,13 @@ func (s *private) voteCtrl(w http.ResponseWriter, r *http.Request) {
 	vote := r.URL.Query().Get("vote") == "1"
 
 	if s.isReadOnly(locator) {
-		rest.SendErrorJSON(w, r, http.StatusForbidden, errors.New("rejected"), "old post, read-only", rest.ErrReadOnly)
+		rest.SendErrorJSON(w, r, http.StatusForbidden, fmt.Errorf("rejected"), "old post, read-only", rest.ErrReadOnly)
 		return
 	}
 
 	// check if user blocked
 	if s.dataService.IsBlocked(locator.SiteID, user.ID) {
-		rest.SendErrorJSON(w, r, http.StatusForbidden, errors.New("rejected"), "user blocked", rest.ErrUserBlocked)
+		rest.SendErrorJSON(w, r, http.StatusForbidden, fmt.Errorf("rejected"), "user blocked", rest.ErrUserBlocked)
 		return
 	}
 
@@ -317,7 +317,7 @@ func (s *private) sendEmailConfirmationCtrl(w http.ResponseWriter, r *http.Reque
 	siteID := r.URL.Query().Get("site")
 	if address == "" {
 		rest.SendErrorJSON(w, r, http.StatusBadRequest,
-			errors.New("missing parameter"), "address parameter is required", rest.ErrInternal)
+			fmt.Errorf("missing parameter"), "address parameter is required", rest.ErrInternal)
 		return
 	}
 	existingAddress, err := s.dataService.GetUserEmail(siteID, user.ID)
@@ -326,7 +326,7 @@ func (s *private) sendEmailConfirmationCtrl(w http.ResponseWriter, r *http.Reque
 	}
 	if address == existingAddress {
 		rest.SendErrorJSON(w, r, http.StatusConflict,
-			errors.New("already verified"), "email address is already verified for this user", rest.ErrInternal)
+			fmt.Errorf("already verified"), "email address is already verified for this user", rest.ErrInternal)
 		return
 	}
 	claims := token.Claims{
@@ -364,7 +364,7 @@ func (s *private) telegramSubscribeCtrl(w http.ResponseWriter, r *http.Request) 
 
 	if s.telegramService == nil {
 		rest.SendErrorJSON(w, r, http.StatusInternalServerError,
-			errors.New("not enabled"), "telegram notifications are not enabled", rest.ErrActionRejected)
+			fmt.Errorf("not enabled"), "telegram notifications are not enabled", rest.ErrActionRejected)
 		return
 	}
 
@@ -373,13 +373,13 @@ func (s *private) telegramSubscribeCtrl(w http.ResponseWriter, r *http.Request) 
 		// GET /telegram/subscribe?site=siteID (No token supplied)
 		siteID := r.URL.Query().Get("site")
 		if siteID == "" {
-			rest.SendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing parameter"), "site parameter is required", rest.ErrInternal)
+			rest.SendErrorJSON(w, r, http.StatusBadRequest, fmt.Errorf("missing parameter"), "site parameter is required", rest.ErrInternal)
 			return
 		}
 		// we don't care as much if we can't retrieve the current value of that field for the user, so ignore the error
 		if existingAddress, _ := s.dataService.GetUserTelegram(siteID, user.ID); existingAddress != "" {
 			rest.SendErrorJSON(w, r, http.StatusConflict,
-				errors.New("already subscribed"), "telegram subscription is already set for this user, delete if first to re-subscribe", rest.ErrActionRejected)
+				fmt.Errorf("already subscribed"), "telegram subscription is already set for this user, delete if first to re-subscribe", rest.ErrActionRejected)
 			return
 		}
 		// Generate and send token
@@ -422,7 +422,7 @@ func (s *private) telegramSubscribeCtrl(w http.ResponseWriter, r *http.Request) 
 func (s *private) setConfirmedEmailCtrl(w http.ResponseWriter, r *http.Request) {
 	tkn := r.URL.Query().Get("tkn")
 	if tkn == "" {
-		rest.SendErrorJSON(w, r, http.StatusBadRequest, errors.New("missing parameter"), "token parameter is required", rest.ErrInternal)
+		rest.SendErrorJSON(w, r, http.StatusBadRequest, fmt.Errorf("missing parameter"), "token parameter is required", rest.ErrInternal)
 		return
 	}
 	user := rest.MustGetUserInfo(r)
@@ -435,7 +435,7 @@ func (s *private) setConfirmedEmailCtrl(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if s.authenticator.TokenService().IsExpired(confClaims) {
-		rest.SendErrorJSON(w, r, http.StatusForbidden, errors.New("expired"), "failed to verify confirmation token", rest.ErrInternal)
+		rest.SendErrorJSON(w, r, http.StatusForbidden, fmt.Errorf("expired"), "failed to verify confirmation token", rest.ErrInternal)
 		return
 	}
 
@@ -475,7 +475,7 @@ func (s *private) emailUnsubscribeCtrl(w http.ResponseWriter, r *http.Request) {
 	tkn := r.URL.Query().Get("tkn")
 	if tkn == "" {
 		rest.SendErrorHTML(w, r, http.StatusBadRequest,
-			errors.New("missing parameter"), "token parameter is required", rest.ErrInternal, s.templates)
+			fmt.Errorf("missing parameter"), "token parameter is required", rest.ErrInternal, s.templates)
 		return
 	}
 	siteID := r.URL.Query().Get("site")
@@ -488,7 +488,7 @@ func (s *private) emailUnsubscribeCtrl(w http.ResponseWriter, r *http.Request) {
 
 	if s.authenticator.TokenService().IsExpired(confClaims) {
 		rest.SendErrorHTML(w, r, http.StatusForbidden,
-			errors.New("expired"), "failed to verify confirmation token", rest.ErrInternal, s.templates)
+			fmt.Errorf("expired"), "failed to verify confirmation token", rest.ErrInternal, s.templates)
 		return
 	}
 
@@ -510,12 +510,12 @@ func (s *private) emailUnsubscribeCtrl(w http.ResponseWriter, r *http.Request) {
 	}
 	if existingAddress == "" {
 		rest.SendErrorHTML(w, r, http.StatusConflict,
-			errors.New("user is not subscribed"), "user does not have active email subscription", rest.ErrInternal, s.templates)
+			fmt.Errorf("user is not subscribed"), "user does not have active email subscription", rest.ErrInternal, s.templates)
 		return
 	}
 	if address != existingAddress {
 		rest.SendErrorHTML(w, r, http.StatusBadRequest,
-			errors.New("wrong email unsubscription"), "email address in request does not match known for this user",
+			fmt.Errorf("wrong email unsubscription"), "email address in request does not match known for this user",
 			rest.ErrInternal, s.templates)
 		return
 	}
@@ -727,11 +727,11 @@ func (s *private) isReadOnly(locator store.Locator) bool {
 func randToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		return "", errors.Wrap(err, "can't get random")
+		return "", fmt.Errorf("can't get random: %w", err)
 	}
 	s := sha1.New() //nolint:gosec // not used for security
 	if _, err := s.Write(b); err != nil {
-		return "", errors.Wrap(err, "can't write randoms to sha1")
+		return "", fmt.Errorf("can't write randoms to sha1: %w", err)
 	}
 	return fmt.Sprintf("%x", s.Sum(nil)), nil
 }

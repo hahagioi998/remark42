@@ -97,7 +97,7 @@ func (s *Service) SubmitAndCommit(idsFn func() []string) error {
 	for _, id := range idsFn() {
 		err := s.store.Commit(id)
 		if err != nil {
-			errs = multierror.Append(errs, errors.Wrapf(err, "failed to commit image %s", id))
+			errs = multierror.Append(errs, fmt.Errorf("failed to commit image %s: %w", id, err))
 		}
 	}
 	return errs.ErrorOrNil()
@@ -343,12 +343,12 @@ func readAndValidateImage(r io.Reader, maxSize int) ([]byte, error) {
 	}
 
 	if len(data) > maxSize {
-		return nil, errors.Errorf("file is too large (limit=%d)", maxSize)
+		return nil, fmt.Errorf("file is too large (limit=%d)", maxSize)
 	}
 
 	// read header first, needs it to check if data is valid png/gif/jpeg
 	if !isValidImage(data[:512]) {
-		return nil, errors.Errorf("file format not allowed")
+		return nil, fmt.Errorf("file format not allowed")
 	}
 
 	return data, nil
@@ -372,7 +372,7 @@ func Sha1Str(s string) string {
 func CachedImgID(imgURL string) (string, error) {
 	parsedURL, err := url.Parse(imgURL)
 	if err != nil {
-		return "", errors.Wrapf(err, "can parse url %s", imgURL)
+		return "", fmt.Errorf("can parse url %s: %w", imgURL, err)
 	}
 	return fmt.Sprintf("cached_images/%s-%s", Sha1Str(parsedURL.Hostname()), Sha1Str(imgURL)), nil
 }
